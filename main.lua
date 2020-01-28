@@ -1,4 +1,5 @@
 local canvas = love.graphics.newCanvas()
+local inspect = require "inspect"
 
 local color = {
 	{1, 1, 1},
@@ -40,21 +41,63 @@ local pixelptr = ffi.typeof("ImageData_Pixel *")
 local mx, my
 
 function fillFromPoint(x, y)
+    local fillColor = color[color.i]
+    local borderColor = color[color.i]
     local imgdata = canvas:newImageData()
     local pointer = ffi.cast(pixelptr, imgdata:getPointer())
-    for i = 1, 100 do
-        for j = 1, 100 do
-            pointer[i + j * 100].r = 1
-            pointer[i + j * 100].g = 1
-            pointer[i + j * 100].b = 1
-            pointer[i + j * 100].r = 1
+    local w, h = imgdata:getDimensions()
+    print("w", w, "h", h)
+
+    function getPixel(px, py)
+        if px >= 1 and px <= w and py >= 1 and py <= h then
+            return {
+            pointer[py * w + px].r / 255,
+            pointer[py * w + px].g / 255,
+            pointer[py * w + px].b / 255,
+            pointer[py * w + px].a / 255,
+        }
         end
     end
+
+    print("color under cursor", inspect(getPixel(x, y)))
+
+    function putPixel(px, py, color)
+        if px >= 1 and px <= w and py >= 1 and py <= h then
+            pointer[py * w + px].r = color[1] * 255
+            pointer[py * w + px].g = color[2] * 255
+            pointer[py * w + px].b = color[3] * 255
+            pointer[py * w + px].a = 255
+        end
+    end
+
+    function fillPixel(px, py)
+        if px >= 1 and px <= w and py >= 1 and py <= h then
+            local c = getPixel(px, py)
+            if c[1] == 0 and c[2] == 0 and c[3] == 0 and
+                c[1] ~= fillColor[1] and c[2] ~= fillColor[2] and 
+                c[3] ~= fillColor[3] then
+                putPixel(px, py, fillColor)
+
+                print("ok")
+                fillPixel(px + 1, py)
+                fillPixel(px - 1, py)
+                fillPixel(px, py + 1)
+                fillPixel(px, py - 1)
+            end
+        end
+    end
+
+    fillPixel(x, y)
+    --fillPixel(x + 1, y + 1)
+    --fillPixel(x + 1, y - 1)
+    --fillPixel(x - 1, y + 1)
+    --fillPixel(x - 1, y - 1)
+
     local newImage = love.graphics.newImage(imgdata)
     imgdata:encode("png", "canvas.png")
     love.graphics.setCanvas(canvas)
     love.graphics.setColor{1, 1, 1}
-    love.graphics.rectangle("fill", 10, 10, 1000, 1000)
+    --love.graphics.rectangle("fill", 10, 10, 1000, 1000)
     love.graphics.draw(newImage, 0, 0)
     love.graphics.setCanvas()
     print("filled")
