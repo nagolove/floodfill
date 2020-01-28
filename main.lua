@@ -1,5 +1,4 @@
 local canvas = love.graphics.newCanvas()
-local inspect = require "inspect"
 
 local color = {
 	{1, 1, 1},
@@ -14,6 +13,13 @@ local width = {
 	1, 2, 3, 4, 5,
 	i = 1
 }
+
+function love.load()
+    love.graphics.setCanvas(canvas)
+    local w, h = love.graphics.getDimensions()
+    love.graphics.rectangle("line", 2, 2, w - 2, h - 2)
+    love.graphics.setCanvas()
+end
 
 function love.mousepressed(x, y, key)
 	if key == 2 then
@@ -41,25 +47,23 @@ local pixelptr = ffi.typeof("ImageData_Pixel *")
 local mx, my
 
 function fillFromPoint(x, y)
+    collectgarbage("collect")
     local fillColor = color[color.i]
     local borderColor = color[color.i]
     local imgdata = canvas:newImageData()
     local pointer = ffi.cast(pixelptr, imgdata:getPointer())
     local w, h = imgdata:getDimensions()
-    print("w", w, "h", h)
 
     function getPixel(px, py)
         if px >= 1 and px <= w and py >= 1 and py <= h then
-            return {
-            pointer[py * w + px].r / 255,
-            pointer[py * w + px].g / 255,
-            pointer[py * w + px].b / 255,
-            pointer[py * w + px].a / 255,
-        }
+            return { pointer[py * w + px].r / 255,
+                pointer[py * w + px].g / 255,
+                pointer[py * w + px].b / 255,
+                pointer[py * w + px].a / 255 }
+        else
+            error("Wrong values for getPixel()")
         end
     end
-
-    print("color under cursor", inspect(getPixel(x, y)))
 
     function putPixel(px, py, color)
         if px >= 1 and px <= w and py >= 1 and py <= h then
@@ -70,63 +74,36 @@ function fillFromPoint(x, y)
         end
     end
 
+    local cc = {0, 0, 0}
+
     function fillPixel(px, py)
-        if px >= 1 and px <= w and py >= 1 and py <= h then
-            local c = getPixel(px, py)
-            if  c[1] == 0 and 
-                c[2] == 0 and 
-                c[3] == 0 then
-
-                --putPixel(px, py, fillColor)
-                putPixel(px, py, fillColor)
-
-                print("ok")
-                fillPixel(px + 1, py)
-                fillPixel(px - 1, py)
-                fillPixel(px, py + 1)
-                fillPixel(px, py - 1)
-                --fillPixel(px + 1, py + 1)
-                --fillPixel(px + 1, py - 1)
-                --fillPixel(px - 1, py + 1)
-                --fillPixel(px - 1, py - 1)
-            end
-        end
-    end
-
-    function fillPixel2(px, py)
         local dx = {0, 1, 0, -1}
         local dy = {-1, 0, 1, 0}
         local stack = {}
-        local stop = false
         table.insert(stack, {px, py})
         repeat
             local t = table.remove(stack)
-            if not t then 
-                print("break")
-                break 
-            end
+            if not t then break end
             local x, y = t[1], t[2]
             putPixel(x, y, fillColor)
             for i = 1, #dx do
                 local nx, ny = x + dx[i], y + dy[i]
                 if nx >= 1 and nx <= w and ny >= 1 and ny <= h then
                     local c = getPixel(nx, ny)
-                    if c[1] == 0 and c[2] == 0 and c[3] == 0 then
+                    if c[1] == cc[1] and c[2] == cc[2] and c[3] == cc[3] then
                         table.insert(stack, {nx, ny})
                     end
                 end
             end
-        until stop
+        until false
     end
-
-    --fillPixel(x, y)
-    fillPixel2(x, y)
+    
+    fillPixel(x, y)
 
     local newImage = love.graphics.newImage(imgdata)
-    imgdata:encode("png", "canvas.png")
+    --imgdata:encode("png", "canvas.png")
     love.graphics.setCanvas(canvas)
     love.graphics.setColor{1, 1, 1}
-    --love.graphics.rectangle("fill", 10, 10, 1000, 1000)
     love.graphics.draw(newImage, 0, 0)
     love.graphics.setCanvas()
     print("filled")
@@ -158,6 +135,8 @@ function love.keypressed(key)
 	if key == 'space' then
 		love.graphics.setCanvas(canvas)
 		love.graphics.clear(color[color.i])
+        local w, h = love.graphics.getDimensions()
+        love.graphics.rectangle("line", 2, 2, w - 2, h - 2)
 		love.graphics.setCanvas()
 	end
 end
