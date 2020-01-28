@@ -73,9 +73,11 @@ function fillFromPoint(x, y)
     function fillPixel(px, py)
         if px >= 1 and px <= w and py >= 1 and py <= h then
             local c = getPixel(px, py)
-            if c[1] == 0 and c[2] == 0 and c[3] == 0 and
-                c[1] ~= fillColor[1] and c[2] ~= fillColor[2] and 
-                c[3] ~= fillColor[3] then
+            if  c[1] == 0 and 
+                c[2] == 0 and 
+                c[3] == 0 then
+
+                --putPixel(px, py, fillColor)
                 putPixel(px, py, fillColor)
 
                 print("ok")
@@ -83,15 +85,42 @@ function fillFromPoint(x, y)
                 fillPixel(px - 1, py)
                 fillPixel(px, py + 1)
                 fillPixel(px, py - 1)
+                --fillPixel(px + 1, py + 1)
+                --fillPixel(px + 1, py - 1)
+                --fillPixel(px - 1, py + 1)
+                --fillPixel(px - 1, py - 1)
             end
         end
     end
 
-    fillPixel(x, y)
-    --fillPixel(x + 1, y + 1)
-    --fillPixel(x + 1, y - 1)
-    --fillPixel(x - 1, y + 1)
-    --fillPixel(x - 1, y - 1)
+    function fillPixel2(px, py)
+        local dx = {0, 1, 0, -1}
+        local dy = {-1, 0, 1, 0}
+        local stack = {}
+        local stop = false
+        table.insert(stack, {px, py})
+        repeat
+            local t = table.remove(stack)
+            if not t then 
+                print("break")
+                break 
+            end
+            local x, y = t[1], t[2]
+            putPixel(x, y, fillColor)
+            for i = 1, #dx do
+                local nx, ny = x + dx[i], y + dy[i]
+                if nx >= 1 and nx <= w and ny >= 1 and ny <= h then
+                    local c = getPixel(nx, ny)
+                    if c[1] == 0 and c[2] == 0 and c[3] == 0 then
+                        table.insert(stack, {nx, ny})
+                    end
+                end
+            end
+        until stop
+    end
+
+    --fillPixel(x, y)
+    fillPixel2(x, y)
 
     local newImage = love.graphics.newImage(imgdata)
     imgdata:encode("png", "canvas.png")
